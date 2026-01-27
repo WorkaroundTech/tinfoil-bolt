@@ -3,59 +3,14 @@
  * A lightning-fast, zero-dependency Tinfoil server for Switch.
  */
 
-const PORT = parseInt(process.env.PORT || "3000");
-const RAW_DIRS = process.env.GAMES_DIRS || "/data/games";
-const BASE_DIRS = RAW_DIRS.split(/[,;]/).map(d => d.trim()).filter(d => d.length > 0);
-const GLOB_PATTERN = "**/*.{nsp,nsz,xci,xciz}";
+import { PORT, BASES, GLOB_PATTERN } from "./config";
+import { encodePath, resolveVirtualPath } from "./lib/paths";
 const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 
-type BaseDir = { path: string; alias: string };
-
-function buildBaseAliases(dirs: string[]): BaseDir[] {
-  const nameCounts = new Map<string, number>();
-
-  return dirs.map((dir) => {
-    const baseName = dir.split("/").filter(Boolean).pop() || "games";
-    const count = nameCounts.get(baseName) ?? 0;
-    nameCounts.set(baseName, count + 1);
-
-    const alias = count === 0 ? baseName : `${baseName}-${count + 1}`;
-    return { path: dir, alias };
-  });
-}
-
-function encodePath(path: string): string {
-  return path
-    .split("/")
-    .filter(Boolean)
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-}
-
-function hasPathTraversal(parts: string[]): boolean {
-  return parts.some((p) => p === ".." || p === "." || p.trim().length === 0);
-}
-
-const BASES = buildBaseAliases(BASE_DIRS);
+// helpers moved to src/config.ts and src/lib/paths.ts
 
 console.log(`⚡ tinfoil-bolt server running!`);
 console.log(`📂 Scanning directories:`, BASES.map((b) => `${b.alias} -> ${b.path}`));
-
-async function resolveVirtualPath(virtualPath: string): Promise<{ file: ReturnType<typeof Bun.file>; absPath: string } | null> {
-  const parts = virtualPath.split("/").filter(Boolean);
-
-  if (parts.length === 0 || hasPathTraversal(parts)) return null;
-
-  const [alias, ...rest] = parts;
-  const base = BASES.find((b) => b.alias === alias);
-  if (!base) return null;
-
-  const absPath = `${base.path}/${rest.join("/")}`;
-  const file = Bun.file(absPath);
-  if (await file.exists()) return { file, absPath };
-
-  return null;
-}
 
 async function buildShopData() {
   const fileEntries: { virtualPath: string; absPath: string }[] = [];
@@ -83,7 +38,7 @@ async function buildShopData() {
       size: Bun.file(absPath).size,
     })),
     directories: Array.from(directories).map((d) => `../files/${encodePath(d)}`),
-    success: `tinfoil-bolt: ${fileEntries.length} games found.`,
+    // success: `tinfoil-bolt: ${fileEntries.length} games found.`,
   };
 }
 
@@ -123,7 +78,7 @@ Bun.serve({
           { url: "shop.tfl", size: 0 },
         ],
         directories: [],
-        success: "tinfoil-bolt index",
+        // success: "tinfoil-bolt index",
       };
       return Response.json(indexPayload);
     }
