@@ -78,22 +78,97 @@ async function buildShopData() {
 
   return {
     files: fileEntries.map(({ virtualPath, absPath }) => ({
-      url: `./files/${encodePath(virtualPath)}`,
+      url: `../files/${encodePath(virtualPath)}`,
       size: Bun.file(absPath).size,
     })),
-    directories: Array.from(directories).map((d) => `./files/${encodePath(d)}`),
+    directories: Array.from(directories).map((d) => `../files/${encodePath(d)}`),
     success: `tinfoil-bolt: ${fileEntries.length} games found.`,
   };
 }
 
 Bun.serve({
   port: PORT,
+  hostname: "0.0.0.0", // Bind to all interfaces (required for WSL/Docker)
   async fetch(req) {
     const url = new URL(req.url);
     const decodedPath = decodeURIComponent(url.pathname);
+    const userAgent = req.headers.get("user-agent") || "unknown";
+    const timestamp = new Date().toISOString();
+
+    console.log(`[${timestamp}] ${req.method} ${url.pathname}`);
+    console.log(`  User-Agent: ${userAgent}`);
 
     // 1. Tinfoil Index Endpoint (lists shop.json and shop.tfl)
     if (url.pathname === "/" || url.pathname === "/tinfoil") {
+      const accept = req.headers.get("accept") || "";
+      const isBrowser = accept.includes("text/html");
+      
+      if (isBrowser) {
+        console.log(`  → Serving HTML index page`);
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tinfoil-bolt ⚡</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0f0f0f;
+            color: #e0e0e0;
+        }
+        h1 { color: #ffd700; }
+        .links { margin: 30px 0; }
+        .links a {
+            display: block;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #4da6ff;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .links a:hover {
+            background: #252525;
+            border-color: #4da6ff;
+        }
+        .info {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        code { color: #ffd700; }
+    </style>
+</head>
+<body>
+    <h1>⚡ tinfoil-bolt</h1>
+    <p>Lightning-fast Tinfoil server for Nintendo Switch</p>
+    
+    <div class="links">
+        <h2>Shop Files:</h2>
+        <a href="/shop.json">📄 shop.json</a>
+        <a href="/shop.tfl">📦 shop.tfl</a>
+    </div>
+    
+    <div class="info">
+        <h3>For Tinfoil on Nintendo Switch:</h3>
+        <p>Add this location in File Browser with path: <code>/</code></p>
+        <p>The Switch will automatically request <code>/shop.tfl</code> to load your game library.</p>
+    </div>
+</body>
+</html>`;
+        return new Response(html, {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+      
+      console.log(`  → Serving JSON index (Tinfoil client)`);
       const indexPayload = {
         files: [
           { url: "shop.json", size: 0 },
@@ -108,16 +183,24 @@ Bun.serve({
     // 2. Shop Data Endpoints (actual game listing)
     if (url.pathname === "/shop.json" || url.pathname === "/shop.tfl") {
       try {
+        console.log(`  → Building shop data...`);
+        const startTime = Date.now();
         const shopData = await buildShopData();
+        const elapsed = Date.now() - startTime;
+        
+        console.log(`  → Found ${shopData.files.length} files in ${shopData.directories.length} directories (${elapsed}ms)`);
+        
         const contentType = url.pathname.endsWith(".tfl") 
           ? "application/octet-stream" 
           : "application/json";
+        
+        console.log(`  → Serving as ${contentType}`);
         
         return new Response(JSON.stringify(shopData), {
           headers: { "Content-Type": contentType },
         });
       } catch (err) {
-        console.error(err);
+        console.error(`  ✗ Error building shop data:`, err);
         return new Response("Error scanning libraries", { status: 500 });
       }
     }
@@ -125,16 +208,35 @@ Bun.serve({
     // 3. File Download Endpoint
     if (url.pathname.startsWith("/files/")) {
       const virtualPath = decodedPath.replace("/files/", "");
+      console.log(`  → Resolving file: ${virtualPath}`);
+      
       const resolved = await resolveVirtualPath(virtualPath);
 
       if (!resolved) {
+        console.log(`  ✗ File not found: ${virtualPath}`);
         return new Response("File not found", { status: 404 });
       }
+
+      const fileSize = resolved.file.size;
+      const sizeMB = (fileSize / (1024 * 1024)).toFixed(2);
+      console.log(`  ✓ Serving file: ${resolved.absPath} (${sizeMB} MB)`);
 
       return new Response(resolved.file);
     }
 
     // 4. Health/Status
+    console.log(`  → Serving health check`);
     return new Response(`⚡ tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 });
   },
 });
+
+console.log(`\n🚀 Server ready at http://0.0.0.0:${PORT}`);
+console.log(`📡 Access from network: http://<YOUR_IP>:${PORT}`);
+console.log(`📋 Endpoints:`);
+console.log(`   GET /          - Index listing`);
+console.log(`   GET /shop.tfl  - Game library (Tinfoil format)`);
+console.log(`   GET /files/*   - File downloads`);
+console.log(`\n💡 WSL Users: If you can't connect from Switch/phone:`);
+console.log(`   1. Find your Windows IP: ipconfig (look for IPv4)`);
+console.log(`   2. Allow port ${PORT} in Windows Firewall`);
+console.log(`   3. Access via http://<WINDOWS_IP>:${PORT}\n`);
