@@ -12,16 +12,16 @@ const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 // helpers moved to src/config.ts and src/lib/paths.ts
 
 console.log(`⚡ tinfoil-bolt server running!`);
-console.log(`📂 Scanning directories:`, BASES.map((b) => `${b.alias} -> ${b.path}`));
+console.log(`> Scanning directories:`, BASES.map((b) => `${b.alias} -> ${b.path}`));
 
 const authPair = getAuthPair();
 if (authPair) {
-  console.log(`🔐 Authentication enabled (user: ${authPair.user})`);
+  console.log(`> Authentication enabled (user: ${authPair.user})`);
 } else {
-  console.log(`🔓 Authentication disabled`);
+  console.log(`> Authentication disabled`);
 }
 
-console.log(`💾 Shop data cache TTL: ${CACHE_TTL}s`);
+console.log(`> CACHE TTL: ${CACHE_TTL}s`);
 const shopDataCache = new ShopDataCache(CACHE_TTL);
 
 
@@ -79,7 +79,7 @@ Bun.serve({
       const isBrowser = accept.includes("text/html");
       
       if (isBrowser) {
-        console.log(`  → Serving HTML index page`);
+        console.log(`  -> Serving HTML index page`);
         if (!(await INDEX_HTML.exists())) {
           console.error("  ✗ index.html not found on disk");
           return new Response("Index page missing", { status: 500 });
@@ -110,21 +110,21 @@ Bun.serve({
         if (shopData) {
           console.log(`  ✓ Cache hit`);
         } else {
-          console.log(`  → Building shop data (cache miss)...`);
+          console.log(`  -> Building shop data (cache miss)...`);
           const startTime = Date.now();
           shopData = await buildShopData();
           shopDataCache.set(shopData);
           const elapsed = Date.now() - startTime;
-          console.log(`  → Built in ${elapsed}ms, caching for ${CACHE_TTL}s`);
+          console.log(`  -> Built in ${elapsed}ms, caching for ${CACHE_TTL}s`);
         }
         
-        console.log(`  → Found ${shopData.files.length} files in ${shopData.directories.length} directories`);
+        console.log(`  -> Found ${shopData.files.length} files in ${shopData.directories.length} directories`);
         
         const contentType = url.pathname.endsWith(".tfl") 
           ? "application/octet-stream" 
           : "application/json";
         
-        console.log(`  → Serving as ${contentType}`);
+        console.log(`  -> Serving as ${contentType}`);
         
         return new Response(JSON.stringify(shopData), {
           headers: { "Content-Type": contentType },
@@ -138,7 +138,7 @@ Bun.serve({
     // 3. File Download Endpoint
     if (url.pathname.startsWith("/files/")) {
       const virtualPath = decodedPath.replace("/files/", "");
-      console.log(`  → Resolving file: ${virtualPath}`);
+      console.log(`  -> Resolving file: ${virtualPath}`);
       
       const resolved = await resolveVirtualPath(virtualPath);
 
@@ -155,14 +155,14 @@ Bun.serve({
     }
 
     // 4. Health/Status
-    console.log(`  → Serving health check`);
-    return new Response(`⚡ tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 });
+    console.log(`  -> Serving health check`);
+    return new Response(`* tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 });
   },
 });
 
-console.log(`\n🚀 Server ready at http://0.0.0.0:${PORT}`);
-console.log(`📡 Access from network: http://<YOUR_IP>:${PORT}`);
-console.log(`📋 Endpoints:`);
+console.log(`\n>> Server ready at http://0.0.0.0:${PORT}`);
+console.log(`>> Access from network: http://<YOUR_IP>:${PORT}`);
+console.log(`>> Endpoints:`);
 console.log(`   GET /          - Index listing`);
 console.log(`   GET /shop.tfl  - Game library (Tinfoil format)`);
 console.log(`   GET /files/*   - File downloads`);
