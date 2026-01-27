@@ -3,8 +3,9 @@
  * A lightning-fast, zero-dependency Tinfoil server for Switch.
  */
 
-import { PORT, BASES, GLOB_PATTERN } from "./config";
+import { PORT, BASES, GLOB_PATTERN, getAuthPair } from "./config";
 import { encodePath, resolveVirtualPath } from "./lib/paths";
+import { isAuthorized, respondUnauthorized } from "./lib/auth";
 const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 
 // helpers moved to src/config.ts and src/lib/paths.ts
@@ -46,6 +47,7 @@ Bun.serve({
   port: PORT,
   hostname: "0.0.0.0", // Bind to all interfaces (required for WSL/Docker)
   async fetch(req) {
+    const authPair = getAuthPair();
     const url = new URL(req.url);
     const decodedPath = decodeURIComponent(url.pathname);
     const userAgent = req.headers.get("user-agent") || "unknown";
@@ -53,6 +55,12 @@ Bun.serve({
 
     console.log(`[${timestamp}] ${req.method} ${url.pathname}`);
     console.log(`  User-Agent: ${userAgent}`);
+
+    // Authorization: protect all routes if auth configured
+    if (!isAuthorized(req, authPair)) {
+      console.log("  ✗ Unauthorized access");
+      return respondUnauthorized();
+    }
 
     // 1. Tinfoil Index Endpoint (lists shop.json and shop.tfl)
     if (url.pathname === "/" || url.pathname === "/tinfoil") {

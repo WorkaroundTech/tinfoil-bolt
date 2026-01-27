@@ -65,6 +65,42 @@ Copy `.env.example` to `.env` and configure the following variables:
 | `PORT` | The port the server listens on. | `3000` |
 | `GAMES_DIRS` | Comma or semicolon-separated list of **absolute paths** where your NSP/NSZ/XCI files are stored. | `/data/games` |
 
+### Authentication (Optional)
+
+You can protect all endpoints with HTTP Basic Auth by setting either `AUTH_USER` + `AUTH_PASS` or a single `AUTH_CREDENTIALS` value (`user:pass`). If none are set, authentication is disabled.
+
+- Variables:
+  - `AUTH_USER` and `AUTH_PASS`: username/password pair
+  - `AUTH_CREDENTIALS`: combined `user:pass` string
+- Precedence: `AUTH_USER`/`AUTH_PASS` take priority over `AUTH_CREDENTIALS` when both are present.
+
+Examples:
+
+```bash
+# Local (Bun)
+AUTH_CREDENTIALS=admin:secret bun run src/server.ts
+
+# Test without auth header (should be 401)
+curl -i http://localhost:3000/
+
+# Test with auth header (should be 200)
+curl -i -H "Authorization: Basic $(printf 'admin:secret' | base64)" http://localhost:3000/
+```
+
+Docker Compose:
+
+```yaml
+services:
+  tinfoil-bolt:
+    env_file: .env
+    environment:
+      - PORT=3000
+      - GAMES_DIRS=/games/1,/games/2
+      - AUTH_CREDENTIALS=${AUTH_CREDENTIALS}
+```
+
+Note: Keep the server on a trusted LAN. If your client supports Basic Auth, set credentials accordingly. If not, leave auth disabled.
+
 ### How It Works
 
 1. The root endpoint (`/` or `/tinfoil`) returns an index listing `shop.json` and `shop.tfl`
@@ -83,9 +119,13 @@ Copy `.env.example` to `.env` and configure the following variables:
   * **Port:** `3000` (or whatever you set)
   * **Path:** `/` (or `/tinfoil` - both work)
   * **Title:** `Bolt Server` (or whatever you like)
+  * **Username:** (if auth enabled, enter your `AUTH_USER` value)
+  * **Password:** (if auth enabled, enter your `AUTH_PASS` value)
 5. Press **X** to Save.
 
 Tinfoil will fetch the index, then request `/shop.tfl` to load your library. Your "New Games" tab will populate automatically.
+
+**Note:** If you have enabled Basic Auth on the server, Tinfoil's File Browser will prompt for credentials when connecting. Leave username/password blank if auth is disabled.
 
 ## Supported Formats
 

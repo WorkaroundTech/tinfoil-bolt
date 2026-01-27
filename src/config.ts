@@ -19,3 +19,21 @@ export function buildBaseAliases(dirs: string[]): BaseDir[] {
 }
 
 export const BASES = buildBaseAliases(BASE_DIRS);
+
+// Basic Auth configuration: either AUTH_USER + AUTH_PASS or AUTH_CREDENTIALS="user:pass"
+export const AUTH_USER = process.env.AUTH_USER;
+export const AUTH_PASS = process.env.AUTH_PASS;
+export const AUTH_CREDENTIALS = process.env.AUTH_CREDENTIALS;
+
+export function getAuthPair(): { user: string; pass: string } | null {
+  if (AUTH_USER && AUTH_PASS) {
+    return { user: AUTH_USER, pass: AUTH_PASS };
+  }
+  if (AUTH_CREDENTIALS && AUTH_CREDENTIALS.includes(":")) {
+    const idx = AUTH_CREDENTIALS.indexOf(":");
+    const user = AUTH_CREDENTIALS.slice(0, idx);
+    const pass = AUTH_CREDENTIALS.slice(idx + 1);
+    if (user.length > 0 && pass.length > 0) return { user, pass };
+  }
+  return null;
+}

@@ -6,11 +6,18 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       - PORT=3000
       # Separate multiple folders with commas or semicolons
       # NOTE: THESE WILL BE THE FOLDERS INSIDE THE CONTAINER, SO MAKE SURE THEY MATCH THE VOLUME MOUNTS
       - GAMES_DIRS=/games/1,/games/2
+      # Optional Basic Auth (enable one of the following)
+      - AUTH_CREDENTIALS=${AUTH_CREDENTIALS}
+      # Or use separate vars:
+      - AUTH_USER=${AUTH_USER}
+      - AUTH_PASS=${AUTH_PASS}
     volumes:
       # Read-only mounts for safety
       - /mnt/nas/switch_games:/games/1:ro
