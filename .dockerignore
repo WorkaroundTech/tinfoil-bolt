@@ -5,3 +5,5 @@ yarn-error.log*
 .DS_Store
 .gitignore
 .env*
+tests
+tsconfig.json
