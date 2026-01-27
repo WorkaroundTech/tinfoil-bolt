@@ -40,3 +40,6 @@ export function getAuthPair(): { user: string; pass: string } | null {
 
 // Cache configuration: TTL in seconds for shop data cache (default 5 minutes)
 export const CACHE_TTL = parseInt(process.env.CACHE_TTL || "300");
+
+// Success message configuration: Optional message to display in Tinfoil (MOTD)
+export const SUCCESS_MESSAGE = process.env.SUCCESS_MESSAGE || "";

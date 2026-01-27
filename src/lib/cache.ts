@@ -1,6 +1,7 @@
 export type ShopData = {
   files: Array<{ url: string; size: number }>;
   directories: string[];
+  success?: string;
 };
 
 export class ShopDataCache {

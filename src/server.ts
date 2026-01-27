@@ -3,10 +3,10 @@
  * A lightning-fast, zero-dependency Tinfoil server for Switch.
  */
 
-import { PORT, BASES, GLOB_PATTERN, getAuthPair, CACHE_TTL } from "./config";
+import { PORT, BASES, GLOB_PATTERN, getAuthPair, CACHE_TTL, SUCCESS_MESSAGE } from "./config";
 import { encodePath, resolveVirtualPath } from "./lib/paths";
 import { isAuthorized, respondUnauthorized } from "./lib/auth";
-import { ShopDataCache } from "./lib/cache";
+import { ShopDataCache, type ShopData } from "./lib/cache";
 const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 
 // helpers moved to src/config.ts and src/lib/paths.ts
@@ -24,8 +24,12 @@ if (authPair) {
 console.log(`> CACHE TTL: ${CACHE_TTL}s`);
 const shopDataCache = new ShopDataCache(CACHE_TTL);
 
+if (SUCCESS_MESSAGE) {
+  console.log(`> Success message: "${SUCCESS_MESSAGE}"`);
+}
 
-async function buildShopData() {
+
+async function buildShopData(): Promise<ShopData> {
   const fileEntries: { virtualPath: string; absPath: string }[] = [];
   const directories = new Set<string>();
 
@@ -45,14 +49,20 @@ async function buildShopData() {
     }
   }));
 
-  return {
+  const shopData: ShopData = {
     files: fileEntries.map(({ virtualPath, absPath }) => ({
       url: `../files/${encodePath(virtualPath)}`,
       size: Bun.file(absPath).size,
     })),
     directories: Array.from(directories).map((d) => `../files/${encodePath(d)}`),
-    // success: `tinfoil-bolt: ${fileEntries.length} games found.`,
   };
+
+  // Add success message if configured
+  if (SUCCESS_MESSAGE) {
+    shopData.success = SUCCESS_MESSAGE;
+  }
+
+  return shopData;
 }
 
 function respondWithTiming(res: Response, startMs: number): Response {
@@ -98,14 +108,19 @@ Bun.serve({
       }
       
       console.log(`  → Serving JSON index (Tinfoil client)`);
-      const indexPayload = {
+      const indexPayload: any = {
         files: [
           { url: "shop.json", size: 0 },
           { url: "shop.tfl", size: 0 },
         ],
         directories: [],
-        // success: "tinfoil-bolt index",
       };
+
+      // Add success message if configured
+      if (SUCCESS_MESSAGE) {
+        indexPayload.success = SUCCESS_MESSAGE;
+      }
+
       return respondWithTiming(Response.json(indexPayload), requestStart);
     }
 

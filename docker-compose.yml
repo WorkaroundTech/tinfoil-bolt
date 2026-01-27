@@ -13,6 +13,7 @@ services:
       # Other vars loaded from .env
       - PORT=${PORT:-3000}
       - CACHE_TTL=${CACHE_TTL:-300}
+      - SUCCESS_MESSAGE=${SUCCESS_MESSAGE}
       - AUTH_USER=${AUTH_USER}
       - AUTH_PASS=${AUTH_PASS}
       - AUTH_CREDENTIALS=${AUTH_CREDENTIALS}
