@@ -37,3 +37,6 @@ export function getAuthPair(): { user: string; pass: string } | null {
   }
   return null;
 }
+
+// Cache configuration: TTL in seconds for shop data cache (default 5 minutes)
+export const CACHE_TTL = parseInt(process.env.CACHE_TTL || "300");

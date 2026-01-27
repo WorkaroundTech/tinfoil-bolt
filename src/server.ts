@@ -3,9 +3,10 @@
  * A lightning-fast, zero-dependency Tinfoil server for Switch.
  */
 
-import { PORT, BASES, GLOB_PATTERN, getAuthPair } from "./config";
+import { PORT, BASES, GLOB_PATTERN, getAuthPair, CACHE_TTL } from "./config";
 import { encodePath, resolveVirtualPath } from "./lib/paths";
 import { isAuthorized, respondUnauthorized } from "./lib/auth";
+import { ShopDataCache } from "./lib/cache";
 const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 
 // helpers moved to src/config.ts and src/lib/paths.ts
@@ -19,6 +20,9 @@ if (authPair) {
 } else {
   console.log(`🔓 Authentication disabled`);
 }
+
+console.log(`💾 Shop data cache TTL: ${CACHE_TTL}s`);
+const shopDataCache = new ShopDataCache(CACHE_TTL);
 
 
 async function buildShopData() {
@@ -101,12 +105,20 @@ Bun.serve({
     // 2. Shop Data Endpoints (actual game listing)
     if (url.pathname === "/shop.json" || url.pathname === "/shop.tfl") {
       try {
-        console.log(`  → Building shop data...`);
-        const startTime = Date.now();
-        const shopData = await buildShopData();
-        const elapsed = Date.now() - startTime;
+        // Check cache first
+        let shopData = shopDataCache.get();
+        if (shopData) {
+          console.log(`  ✓ Cache hit`);
+        } else {
+          console.log(`  → Building shop data (cache miss)...`);
+          const startTime = Date.now();
+          shopData = await buildShopData();
+          shopDataCache.set(shopData);
+          const elapsed = Date.now() - startTime;
+          console.log(`  → Built in ${elapsed}ms, caching for ${CACHE_TTL}s`);
+        }
         
-        console.log(`  → Found ${shopData.files.length} files in ${shopData.directories.length} directories (${elapsed}ms)`);
+        console.log(`  → Found ${shopData.files.length} files in ${shopData.directories.length} directories`);
         
         const contentType = url.pathname.endsWith(".tfl") 
           ? "application/octet-stream" 
