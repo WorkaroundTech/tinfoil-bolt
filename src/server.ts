@@ -3,10 +3,11 @@
  * A lightning-fast, zero-dependency Tinfoil server for Switch.
  */
 
-import { PORT, BASES, GLOB_PATTERN, getAuthPair, CACHE_TTL, SUCCESS_MESSAGE } from "./config";
+import { PORT, BASES, GLOB_PATTERN, getAuthPair, CACHE_TTL, SUCCESS_MESSAGE, LOG_FORMAT } from "./config";
 import { encodePath, resolveVirtualPath } from "./lib/paths";
 import { isAuthorized, respondUnauthorized } from "./lib/auth";
 import { ShopDataCache, type ShopData } from "./lib/cache";
+import { logRequest } from "./lib/logger";
 const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 
 // helpers moved to src/config.ts and src/lib/paths.ts
@@ -28,6 +29,7 @@ if (SUCCESS_MESSAGE) {
   console.log(`> Success message: "${SUCCESS_MESSAGE}"`);
 }
 
+console.log(`> Log format: ${LOG_FORMAT}`);
 
 async function buildShopData(): Promise<ShopData> {
   const fileEntries: { virtualPath: string; absPath: string }[] = [];
@@ -65,12 +67,6 @@ async function buildShopData(): Promise<ShopData> {
   return shopData;
 }
 
-function respondWithTiming(res: Response, startMs: number): Response {
-  const elapsed = Date.now() - startMs;
-  console.log(`  [${elapsed}ms]`);
-  return res;
-}
-
 Bun.serve({
   port: PORT,
   hostname: "0.0.0.0", // Bind to all interfaces (required for WSL/Docker)
@@ -78,16 +74,13 @@ Bun.serve({
     const requestStart = Date.now();
     const url = new URL(req.url);
     const decodedPath = decodeURIComponent(url.pathname);
-    const userAgent = req.headers.get("user-agent") || "unknown";
-    const timestamp = new Date().toISOString();
-
-    console.log(`[${timestamp}] ${req.method} ${url.pathname}`);
-    console.log(`  User-Agent: ${userAgent}`);
+    const userAgent = req.headers.get("user-agent") || "";
 
     // Authorization: protect all routes if auth configured
     if (!isAuthorized(req, authPair)) {
-      console.log("  ✗ Unauthorized access");
-      return respondWithTiming(respondUnauthorized(), requestStart);
+      const elapsed = Date.now() - requestStart;
+      logRequest(LOG_FORMAT, req.method, url.pathname, 401, elapsed, { userAgent });
+      return respondUnauthorized();
     }
 
     // 1. Tinfoil Index Endpoint (lists shop.json and shop.tfl)
@@ -96,18 +89,23 @@ Bun.serve({
       const isBrowser = accept.includes("text/html");
       
       if (isBrowser) {
-        console.log(`  -> Serving HTML index page`);
         if (!(await INDEX_HTML.exists())) {
-          console.error("  ✗ index.html not found on disk");
-          return respondWithTiming(new Response("Index page missing", { status: 500 }), requestStart);
+          const elapsed = Date.now() - requestStart;
+          logRequest(LOG_FORMAT, req.method, url.pathname, 500, elapsed, { userAgent });
+          return new Response("Index page missing", { status: 500 });
         }
 
-        return respondWithTiming(new Response(INDEX_HTML, {
+        const htmlResponse = new Response(INDEX_HTML, {
           headers: { "Content-Type": "text/html; charset=utf-8" },
-        }), requestStart);
+        });
+        const elapsed = Date.now() - requestStart;
+        logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, {
+          contentLength: INDEX_HTML.size,
+          userAgent,
+        });
+        return htmlResponse;
       }
       
-      console.log(`  → Serving JSON index (Tinfoil client)`);
       const indexPayload: any = {
         files: [
           { url: "shop.json", size: 0 },
@@ -121,7 +119,10 @@ Bun.serve({
         indexPayload.success = SUCCESS_MESSAGE;
       }
 
-      return respondWithTiming(Response.json(indexPayload), requestStart);
+      const jsonResponse = Response.json(indexPayload);
+      const elapsed = Date.now() - requestStart;
+      logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, { userAgent });
+      return jsonResponse;
     }
 
     // 2. Shop Data Endpoints (actual game listing)
@@ -129,56 +130,59 @@ Bun.serve({
       try {
         // Check cache first
         let shopData = shopDataCache.get();
-        if (shopData) {
-          console.log(`  ✓ Cache hit`);
-        } else {
-          console.log(`  -> Building shop data (cache miss)...`);
-          const startTime = Date.now();
+        if (!shopData) {
           shopData = await buildShopData();
           shopDataCache.set(shopData);
-          const elapsed = Date.now() - startTime;
-          console.log(`  -> Built in ${elapsed}ms, caching for ${CACHE_TTL}s`);
         }
-        
-        console.log(`  -> Found ${shopData.files.length} files in ${shopData.directories.length} directories`);
         
         const contentType = url.pathname.endsWith(".tfl") 
           ? "application/octet-stream" 
           : "application/json";
         
-        console.log(`  -> Serving as ${contentType}`);
-        
-        return respondWithTiming(new Response(JSON.stringify(shopData), {
+        const responseBody = JSON.stringify(shopData);
+        const shopResponse = new Response(responseBody, {
           headers: { "Content-Type": contentType },
-        }), requestStart);
+        });
+        
+        const elapsed = Date.now() - requestStart;
+        logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, {
+          contentLength: responseBody.length,
+          userAgent,
+        });
+        return shopResponse;
       } catch (err) {
-        console.error(`  ✗ Error building shop data:`, err);
-        return respondWithTiming(new Response("Error scanning libraries", { status: 500 }), requestStart);
+        console.error(`✗ Error building shop data:`, err);
+        const elapsed = Date.now() - requestStart;
+        logRequest(LOG_FORMAT, req.method, url.pathname, 500, elapsed, { userAgent });
+        return new Response("Error scanning libraries", { status: 500 });
       }
     }
 
     // 3. File Download Endpoint
     if (url.pathname.startsWith("/files/")) {
       const virtualPath = decodedPath.replace("/files/", "");
-      console.log(`  -> Resolving file: ${virtualPath}`);
-      
       const resolved = await resolveVirtualPath(virtualPath);
 
       if (!resolved) {
-        console.log(`  ✗ File not found: ${virtualPath}`);
-        return respondWithTiming(new Response("File not found", { status: 404 }), requestStart);
+        const elapsed = Date.now() - requestStart;
+        logRequest(LOG_FORMAT, req.method, url.pathname, 404, elapsed, { userAgent });
+        return new Response("File not found", { status: 404 });
       }
 
-      const fileSize = resolved.file.size;
-      const sizeMB = (fileSize / (1024 * 1024)).toFixed(2);
-      console.log(`  ✓ Serving file: ${resolved.absPath} (${sizeMB} MB)`);
-
-      return respondWithTiming(new Response(resolved.file), requestStart);
+      const fileResponse = new Response(resolved.file);
+      const elapsed = Date.now() - requestStart;
+      logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, {
+        contentLength: resolved.file.size,
+        userAgent,
+      });
+      return fileResponse;
     }
 
     // 4. Health/Status
-    console.log(`  -> Serving health check`);
-    return respondWithTiming(new Response(`* tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 }), requestStart);
+    const healthResponse = new Response(`* tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 });
+    const elapsed = Date.now() - requestStart;
+    logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, { userAgent });
+    return healthResponse;
   },
 });
 

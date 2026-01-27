@@ -43,3 +43,7 @@ export const CACHE_TTL = parseInt(process.env.CACHE_TTL || "300");
 
 // Success message configuration: Optional message to display in Tinfoil (MOTD)
 export const SUCCESS_MESSAGE = process.env.SUCCESS_MESSAGE || "";
+
+// Logging configuration: Morgan-style log format (tiny, short, dev, common, combined)
+export const LOG_FORMAT = (process.env.LOG_FORMAT || "dev") as "tiny" | "short" | "dev" | "common" | "combined";
+
