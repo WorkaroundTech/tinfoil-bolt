@@ -59,7 +59,9 @@ function createTinyFormat(ctx: LogContext): string {
 function createShortFormat(ctx: LogContext): string {
   const timestamp = ctx.timestamp || formatTimestamp();
   const contentLength = formatBytes(ctx.contentLength);
-  return `[${timestamp}] ${ctx.method} ${ctx.path} ${ctx.status} ${contentLength} - ${formatTime(ctx.responseTime)}`;
+  const remoteAddr = ctx.remoteAddr || "-";
+
+  return `[${timestamp}] ${remoteAddr} - ${ctx.method} ${ctx.path} ${ctx.status} ${contentLength} - ${formatTime(ctx.responseTime)}`;
 }
 
 function createDevFormat(ctx: LogContext): string {
@@ -67,7 +69,8 @@ function createDevFormat(ctx: LogContext): string {
   const colorCode = getStatusColor(ctx.status);
   const resetCode = RESET;
   const contentLength = formatBytes(ctx.contentLength);
-  return `[${timestamp}] ${colorCode}${ctx.method} ${ctx.path} ${ctx.status}${resetCode} ${contentLength} - ${formatTime(ctx.responseTime)}`;
+  const remoteAddr = ctx.remoteAddr || "-";
+  return `[${timestamp}] ${remoteAddr} - ${colorCode}${ctx.method} ${ctx.path} ${ctx.status}${resetCode} ${contentLength} - ${formatTime(ctx.responseTime)}`;
 }
 
 function createCommonFormat(ctx: LogContext): string {

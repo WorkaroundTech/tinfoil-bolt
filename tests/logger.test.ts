@@ -18,7 +18,7 @@ describe("logger formats", () => {
 
   it("should format logs in short format", () => {
     const result = formatLog("short" as LogFormat, testContext as any);
-    expect(result).toMatch(/^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}\] GET \/shop\.tfl 200 2\.50MB - 287ms$/);
+    expect(result).toMatch(/^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}\] - - GET \/shop\.tfl 200 2\.50MB - 287ms$/);
   });
 
   it("should include status code in all formats", () => {
