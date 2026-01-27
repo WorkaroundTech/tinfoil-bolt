@@ -22,8 +22,7 @@ export class ShopDataCache {
     if (!this.data) return null;
     const now = Date.now();
     if (now - this.timestamp > this.ttlMs) {
-      this.data = null;
-      this.timestamp = 0;
+      this.reset();
       return null;
     }
     return this.data;
@@ -34,7 +33,7 @@ export class ShopDataCache {
   }
 
   reset(): void {
-    this.data = null;
+    this.data = null; // Invalidate cache
     this.timestamp = 0;
   }
 }
