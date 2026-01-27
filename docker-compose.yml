@@ -6,13 +6,18 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
-    env_file:
-      - .env
+    environment:
+      # Override GAMES_DIRS for container - mapped to /data/games1, /data/games2, etc.
+      # Add as many /data/gamesN paths as you have volume mounts below
+      - GAMES_DIRS=/data/games1,/data/games2
+      # Other vars loaded from .env
+      - PORT=${PORT:-3000}
+      - CACHE_TTL=${CACHE_TTL:-300}
+      - AUTH_USER=${AUTH_USER}
+      - AUTH_PASS=${AUTH_PASS}
+      - AUTH_CREDENTIALS=${AUTH_CREDENTIALS}
     volumes:
-      # IMPORTANT: Container paths MUST match the GAMES_DIRS variable in .env
-      # If GAMES_DIRS=/games/1,/games/2 then mount directories to /games/1 and /games/2
-      # Left side = host path (your actual game location on disk)
-      # Right side = container path (must match GAMES_DIRS in .env)
-      # Read-only mounts for safety
-      - /mnt/nas/switch_games:/games/1:ro
-      - /mnt/usb/switch_games:/games/2:ro
+      # Mount your actual game directories (from host) to /data/games1, /data/games2, etc.
+      # Update the left side with your real paths, keep the right side as /data/gamesN
+      - /mnt/nas/switch_games:/data/games1:ro
+      - /mnt/usb/switch_games:/data/games2:ro
