@@ -7,6 +7,7 @@ const PORT = parseInt(process.env.PORT || "3000");
 const RAW_DIRS = process.env.GAMES_DIRS || "/data/games";
 const BASE_DIRS = RAW_DIRS.split(/[,;]/).map(d => d.trim()).filter(d => d.length > 0);
 const GLOB_PATTERN = "**/*.{nsp,nsz,xci,xciz}";
+const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 
 type BaseDir = { path: string; alias: string };
 
@@ -105,65 +106,12 @@ Bun.serve({
       
       if (isBrowser) {
         console.log(`  → Serving HTML index page`);
-        const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>tinfoil-bolt ⚡</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #0f0f0f;
-            color: #e0e0e0;
+        if (!(await INDEX_HTML.exists())) {
+          console.error("  ✗ index.html not found on disk");
+          return new Response("Index page missing", { status: 500 });
         }
-        h1 { color: #ffd700; }
-        .links { margin: 30px 0; }
-        .links a {
-            display: block;
-            padding: 15px 20px;
-            margin: 10px 0;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #4da6ff;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        .links a:hover {
-            background: #252525;
-            border-color: #4da6ff;
-        }
-        .info {
-            background: #1a1a1a;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-        code { color: #ffd700; }
-    </style>
-</head>
-<body>
-    <h1>⚡ tinfoil-bolt</h1>
-    <p>Lightning-fast Tinfoil server for Nintendo Switch</p>
-    
-    <div class="links">
-        <h2>Shop Files:</h2>
-        <a href="/shop.json">📄 shop.json</a>
-        <a href="/shop.tfl">📦 shop.tfl</a>
-    </div>
-    
-    <div class="info">
-        <h3>For Tinfoil on Nintendo Switch:</h3>
-        <p>Add this location in File Browser with path: <code>/</code></p>
-        <p>The Switch will automatically request <code>/shop.tfl</code> to load your game library.</p>
-    </div>
-</body>
-</html>`;
-        return new Response(html, {
+
+        return new Response(INDEX_HTML, {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
       }
@@ -236,7 +184,3 @@ console.log(`📋 Endpoints:`);
 console.log(`   GET /          - Index listing`);
 console.log(`   GET /shop.tfl  - Game library (Tinfoil format)`);
 console.log(`   GET /files/*   - File downloads`);
-console.log(`\n💡 WSL Users: If you can't connect from Switch/phone:`);
-console.log(`   1. Find your Windows IP: ipconfig (look for IPv4)`);
-console.log(`   2. Allow port ${PORT} in Windows Firewall`);
-console.log(`   3. Access via http://<WINDOWS_IP>:${PORT}\n`);
