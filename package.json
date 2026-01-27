@@ -1,0 +1,13 @@
+{
+  "name": "tinfoil-bolt",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/server.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
