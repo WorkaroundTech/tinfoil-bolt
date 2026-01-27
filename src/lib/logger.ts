@@ -34,31 +34,51 @@ function formatTime(ms: number): string {
 
 const RESET = "\x1b[0m";
 
+function formatTimestamp(date: Date = new Date()): string {
+  const offset = -date.getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  const hours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, '0');
+  const minutes = (Math.abs(offset) % 60).toString().padStart(2, '0');
+  
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hour = date.getHours().toString().padStart(2, '0');
+  const minute = date.getMinutes().toString().padStart(2, '0');
+  const second = date.getSeconds().toString().padStart(2, '0');
+  const ms = date.getMilliseconds().toString().padStart(3, '0');
+  
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}.${ms}${sign}${hours}:${minutes}`;
+}
+
 function createTinyFormat(ctx: LogContext): string {
-  return `${ctx.method} ${ctx.path} ${ctx.status} - ${formatTime(ctx.responseTime)}`;
+  const timestamp = ctx.timestamp || formatTimestamp();
+  return `[${timestamp}] ${ctx.method} ${ctx.path} ${ctx.status} - ${formatTime(ctx.responseTime)}`;
 }
 
 function createShortFormat(ctx: LogContext): string {
+  const timestamp = ctx.timestamp || formatTimestamp();
   const contentLength = formatBytes(ctx.contentLength);
-  return `${ctx.method} ${ctx.path} ${ctx.status} ${contentLength} - ${formatTime(ctx.responseTime)}`;
+  return `[${timestamp}] ${ctx.method} ${ctx.path} ${ctx.status} ${contentLength} - ${formatTime(ctx.responseTime)}`;
 }
 
 function createDevFormat(ctx: LogContext): string {
+  const timestamp = ctx.timestamp || formatTimestamp();
   const colorCode = getStatusColor(ctx.status);
   const resetCode = RESET;
   const contentLength = formatBytes(ctx.contentLength);
-  return `${colorCode}${ctx.method} ${ctx.path} ${ctx.status}${resetCode} ${contentLength} - ${formatTime(ctx.responseTime)}`;
+  return `[${timestamp}] ${colorCode}${ctx.method} ${ctx.path} ${ctx.status}${resetCode} ${contentLength} - ${formatTime(ctx.responseTime)}`;
 }
 
 function createCommonFormat(ctx: LogContext): string {
-  const timestamp = ctx.timestamp || new Date().toISOString();
+  const timestamp = ctx.timestamp || formatTimestamp();
   const remoteAddr = ctx.remoteAddr || "-";
   // Apache Common Log Format: 127.0.0.1 - - [21/Jul/2024 12:30:45 +0000] "GET / HTTP/1.1" 200 1234
   return `${remoteAddr} - - [${timestamp}] "${ctx.method} ${ctx.path} HTTP/1.1" ${ctx.status} ${ctx.contentLength || 0}`;
 }
 
 function createCombinedFormat(ctx: LogContext): string {
-  const timestamp = ctx.timestamp || new Date().toISOString();
+  const timestamp = ctx.timestamp || formatTimestamp();
   const remoteAddr = ctx.remoteAddr || "-";
   const userAgent = ctx.userAgent || "-";
   // Apache Combined Log Format (adds Referer and User-Agent)
@@ -102,7 +122,7 @@ export function logRequest(
     responseTime,
     userAgent: options?.userAgent,
     remoteAddr: options?.remoteAddr,
-    timestamp: new Date().toISOString(),
+    timestamp: formatTimestamp(),
   };
 
   const logMessage = formatLog(format, ctx);

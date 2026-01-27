@@ -70,16 +70,20 @@ async function buildShopData(): Promise<ShopData> {
 Bun.serve({
   port: PORT,
   hostname: "0.0.0.0", // Bind to all interfaces (required for WSL/Docker)
-  async fetch(req) {
+  async fetch(req, server) {
     const requestStart = Date.now();
     const url = new URL(req.url);
     const decodedPath = decodeURIComponent(url.pathname);
     const userAgent = req.headers.get("user-agent") || "";
+    
+    // Get remote address from x-forwarded-for header (set by proxies/load balancers)
+    // Falls back to "-" if not available (e.g., direct connection)
+    const remoteAddr = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || server.requestIP(req)?.address || "-";
 
     // Authorization: protect all routes if auth configured
     if (!isAuthorized(req, authPair)) {
       const elapsed = Date.now() - requestStart;
-      logRequest(LOG_FORMAT, req.method, url.pathname, 401, elapsed, { userAgent });
+      logRequest(LOG_FORMAT, req.method, url.pathname, 401, elapsed, { remoteAddr, userAgent });
       return respondUnauthorized();
     }
 
@@ -91,7 +95,7 @@ Bun.serve({
       if (isBrowser) {
         if (!(await INDEX_HTML.exists())) {
           const elapsed = Date.now() - requestStart;
-          logRequest(LOG_FORMAT, req.method, url.pathname, 500, elapsed, { userAgent });
+          logRequest(LOG_FORMAT, req.method, url.pathname, 500, elapsed, { remoteAddr, userAgent });
           return new Response("Index page missing", { status: 500 });
         }
 
@@ -101,6 +105,7 @@ Bun.serve({
         const elapsed = Date.now() - requestStart;
         logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, {
           contentLength: INDEX_HTML.size,
+          remoteAddr,
           userAgent,
         });
         return htmlResponse;
@@ -121,7 +126,7 @@ Bun.serve({
 
       const jsonResponse = Response.json(indexPayload);
       const elapsed = Date.now() - requestStart;
-      logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, { userAgent });
+      logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, { remoteAddr, userAgent });
       return jsonResponse;
     }
 
@@ -147,13 +152,14 @@ Bun.serve({
         const elapsed = Date.now() - requestStart;
         logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, {
           contentLength: responseBody.length,
+          remoteAddr,
           userAgent,
         });
         return shopResponse;
       } catch (err) {
         console.error(`✗ Error building shop data:`, err);
         const elapsed = Date.now() - requestStart;
-        logRequest(LOG_FORMAT, req.method, url.pathname, 500, elapsed, { userAgent });
+        logRequest(LOG_FORMAT, req.method, url.pathname, 500, elapsed, { remoteAddr, userAgent });
         return new Response("Error scanning libraries", { status: 500 });
       }
     }
@@ -165,7 +171,7 @@ Bun.serve({
 
       if (!resolved) {
         const elapsed = Date.now() - requestStart;
-        logRequest(LOG_FORMAT, req.method, url.pathname, 404, elapsed, { userAgent });
+        logRequest(LOG_FORMAT, req.method, url.pathname, 404, elapsed, { remoteAddr, userAgent });
         return new Response("File not found", { status: 404 });
       }
 
@@ -173,6 +179,7 @@ Bun.serve({
       const elapsed = Date.now() - requestStart;
       logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, {
         contentLength: resolved.file.size,
+        remoteAddr,
         userAgent,
       });
       return fileResponse;
@@ -181,7 +188,7 @@ Bun.serve({
     // 4. Health/Status
     const healthResponse = new Response(`* tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 });
     const elapsed = Date.now() - requestStart;
-    logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, { userAgent });
+    logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, { remoteAddr, userAgent });
     return healthResponse;
   },
 });
