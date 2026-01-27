@@ -55,10 +55,17 @@ async function buildShopData() {
   };
 }
 
+function respondWithTiming(res: Response, startMs: number): Response {
+  const elapsed = Date.now() - startMs;
+  console.log(`  [${elapsed}ms]`);
+  return res;
+}
+
 Bun.serve({
   port: PORT,
   hostname: "0.0.0.0", // Bind to all interfaces (required for WSL/Docker)
   async fetch(req) {
+    const requestStart = Date.now();
     const url = new URL(req.url);
     const decodedPath = decodeURIComponent(url.pathname);
     const userAgent = req.headers.get("user-agent") || "unknown";
@@ -70,7 +77,7 @@ Bun.serve({
     // Authorization: protect all routes if auth configured
     if (!isAuthorized(req, authPair)) {
       console.log("  ✗ Unauthorized access");
-      return respondUnauthorized();
+      return respondWithTiming(respondUnauthorized(), requestStart);
     }
 
     // 1. Tinfoil Index Endpoint (lists shop.json and shop.tfl)
@@ -82,12 +89,12 @@ Bun.serve({
         console.log(`  -> Serving HTML index page`);
         if (!(await INDEX_HTML.exists())) {
           console.error("  ✗ index.html not found on disk");
-          return new Response("Index page missing", { status: 500 });
+          return respondWithTiming(new Response("Index page missing", { status: 500 }), requestStart);
         }
 
-        return new Response(INDEX_HTML, {
+        return respondWithTiming(new Response(INDEX_HTML, {
           headers: { "Content-Type": "text/html; charset=utf-8" },
-        });
+        }), requestStart);
       }
       
       console.log(`  → Serving JSON index (Tinfoil client)`);
@@ -99,7 +106,7 @@ Bun.serve({
         directories: [],
         // success: "tinfoil-bolt index",
       };
-      return Response.json(indexPayload);
+      return respondWithTiming(Response.json(indexPayload), requestStart);
     }
 
     // 2. Shop Data Endpoints (actual game listing)
@@ -126,12 +133,12 @@ Bun.serve({
         
         console.log(`  -> Serving as ${contentType}`);
         
-        return new Response(JSON.stringify(shopData), {
+        return respondWithTiming(new Response(JSON.stringify(shopData), {
           headers: { "Content-Type": contentType },
-        });
+        }), requestStart);
       } catch (err) {
         console.error(`  ✗ Error building shop data:`, err);
-        return new Response("Error scanning libraries", { status: 500 });
+        return respondWithTiming(new Response("Error scanning libraries", { status: 500 }), requestStart);
       }
     }
 
@@ -144,19 +151,19 @@ Bun.serve({
 
       if (!resolved) {
         console.log(`  ✗ File not found: ${virtualPath}`);
-        return new Response("File not found", { status: 404 });
+        return respondWithTiming(new Response("File not found", { status: 404 }), requestStart);
       }
 
       const fileSize = resolved.file.size;
       const sizeMB = (fileSize / (1024 * 1024)).toFixed(2);
       console.log(`  ✓ Serving file: ${resolved.absPath} (${sizeMB} MB)`);
 
-      return new Response(resolved.file);
+      return respondWithTiming(new Response(resolved.file), requestStart);
     }
 
     // 4. Health/Status
     console.log(`  -> Serving health check`);
-    return new Response(`* tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 });
+    return respondWithTiming(new Response(`* tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 }), requestStart);
   },
 });
 
