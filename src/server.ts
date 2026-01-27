@@ -13,6 +13,14 @@ const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 console.log(`⚡ tinfoil-bolt server running!`);
 console.log(`📂 Scanning directories:`, BASES.map((b) => `${b.alias} -> ${b.path}`));
 
+const authPair = getAuthPair();
+if (authPair) {
+  console.log(`🔐 Authentication enabled (user: ${authPair.user})`);
+} else {
+  console.log(`🔓 Authentication disabled`);
+}
+
+
 async function buildShopData() {
   const fileEntries: { virtualPath: string; absPath: string }[] = [];
   const directories = new Set<string>();
@@ -47,7 +55,6 @@ Bun.serve({
   port: PORT,
   hostname: "0.0.0.0", // Bind to all interfaces (required for WSL/Docker)
   async fetch(req) {
-    const authPair = getAuthPair();
     const url = new URL(req.url);
     const decodedPath = decodeURIComponent(url.pathname);
     const userAgent = req.headers.get("user-agent") || "unknown";
