@@ -22,12 +22,12 @@ Many existing Tinfoil server solutions suffer from feature creep: auto-updaters 
 
 This is the easiest way to run `tinfoil-bolt` on your NAS, Home Server, or Proxmox LXC container.
 
-1. Update the `docker-compose.yml` file with your environment info
-2. Download the `server.ts` file from this repo.
-3. Run:
+1. Clone or download this entire repository.
+2. Copy `.env.example` to `.env` and update with your game directories and optional auth settings.
+3. Update the volume paths in `docker-compose.yml` to match your actual game storage locations.
+4. Run:
 ```bash
 docker compose up -d
-
 ```
 
 

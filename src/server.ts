@@ -167,8 +167,7 @@ Bun.serve({
   },
 });
 
-console.log(`\n>> Server ready at http://0.0.0.0:${PORT}`);
-console.log(`>> Access from network: http://<YOUR_IP>:${PORT}`);
+console.log(`\n>> Server is up and listening on port: ${PORT}`);
 console.log(`>> Endpoints:`);
 console.log(`   GET /          - Index listing`);
 console.log(`   GET /shop.tfl  - Game library (Tinfoil format)`);
