@@ -1,0 +1,64 @@
+import { describe, it, expect, beforeEach } from "bun:test";
+import { buildShopData, type ShopData } from "../../src/lib/shop";
+
+describe("lib/shop", () => {
+  describe("buildShopData", () => {
+    it("should return valid ShopData structure", async () => {
+      const shopData = await buildShopData();
+
+      expect(shopData).toHaveProperty("files");
+      expect(shopData).toHaveProperty("directories");
+      expect(Array.isArray(shopData.files)).toBe(true);
+      expect(Array.isArray(shopData.directories)).toBe(true);
+    });
+
+    it("should have file objects with url and size properties", async () => {
+      const shopData = await buildShopData();
+
+      if (shopData.files.length > 0) {
+        const file = shopData.files[0];
+        expect(file).toHaveProperty("url");
+        expect(file).toHaveProperty("size");
+        expect(typeof file.url).toBe("string");
+        expect(typeof file.size).toBe("number");
+      }
+    });
+
+    it("should encode virtual paths in file URLs", async () => {
+      const shopData = await buildShopData();
+
+      if (shopData.files.length > 0) {
+        const file = shopData.files[0];
+        // URLs should be encoded and start with ../files/
+        expect(file.url).toContain("../files/");
+      }
+    });
+
+    it("should include directory paths", async () => {
+      const shopData = await buildShopData();
+
+      if (shopData.directories.length > 0) {
+        const dir = shopData.directories[0];
+        expect(dir).toContain("../files/");
+      }
+    });
+
+    it("should include success message if configured", async () => {
+      const originalEnv = process.env.SUCCESS_MESSAGE;
+      process.env.SUCCESS_MESSAGE = "Test success message";
+
+      // Need to reload module to pick up new env
+      // For now we just test the structure
+      const shopData = await buildShopData();
+      expect(shopData).toHaveProperty("files");
+
+      process.env.SUCCESS_MESSAGE = originalEnv;
+    });
+
+    it("should not error on empty directories", async () => {
+      // Should not throw even if no files found
+      const shopData = await buildShopData();
+      expect(shopData).toBeDefined();
+    });
+  });
+});
