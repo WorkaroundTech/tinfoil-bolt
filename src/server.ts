@@ -8,6 +8,7 @@ import { encodePath, resolveVirtualPath } from "./lib/paths";
 import { isAuthorized, respondUnauthorized } from "./lib/auth";
 import { ShopDataCache, type ShopData } from "./lib/cache";
 import { logRequest } from "./lib/logger";
+import { parseRange, isSingleRange, getContentRangeHeader } from "./lib/range";
 const INDEX_HTML = Bun.file(new URL("./index.html", import.meta.url));
 
 // helpers moved to src/config.ts and src/lib/paths.ts
@@ -175,10 +176,77 @@ Bun.serve({
         return new Response("File not found", { status: 404 });
       }
 
-      const fileResponse = new Response(resolved.file);
+      const fileSize = resolved.file.size;
+      const rangeHeader = req.headers.get("range");
+
+      // Check for Range header to support resumable downloads
+      if (rangeHeader) {
+        // Reject multi-range requests (not supported)
+        if (!isSingleRange(rangeHeader)) {
+          const elapsed = Date.now() - requestStart;
+          logRequest(LOG_FORMAT, req.method, url.pathname, 416, elapsed, { remoteAddr, userAgent });
+          return new Response("Multiple ranges not supported", {
+            status: 416,
+            headers: {
+              "Content-Range": `bytes */${fileSize}`,
+            },
+          });
+        }
+
+        // Parse the range
+        const range = parseRange(rangeHeader, fileSize);
+
+        if (!range) {
+          // Invalid range request - return 416 Range Not Satisfiable
+          const elapsed = Date.now() - requestStart;
+          logRequest(LOG_FORMAT, req.method, url.pathname, 416, elapsed, { remoteAddr, userAgent });
+          return new Response("Range request invalid", {
+            status: 416,
+            headers: {
+              "Content-Range": `bytes */${fileSize}`,
+            },
+          });
+        }
+
+        // Return partial content
+        // Note: HTTP Range is inclusive on both ends, but BunFile.slice() is exclusive on the end
+        // So we need to pass (end + 1) to slice()
+        const partialFile = resolved.file.slice(range.start, range.end + 1);
+        const contentLength = range.end - range.start + 1;
+
+        const fileResponse = new Response(partialFile, {
+          status: 206,
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Content-Length": contentLength.toString(),
+            "Content-Range": getContentRangeHeader(range.start, range.end, fileSize),
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=31536000", // 1 year for immutable files
+          },
+        });
+
+        const elapsed = Date.now() - requestStart;
+        logRequest(LOG_FORMAT, req.method, url.pathname, 206, elapsed, {
+          contentLength,
+          remoteAddr,
+          userAgent,
+        });
+        return fileResponse;
+      }
+
+      // No Range header - return full file
+      const fileResponse = new Response(resolved.file, {
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "Content-Length": fileSize.toString(),
+          "Accept-Ranges": "bytes",
+          "Cache-Control": "public, max-age=31536000", // 1 year for immutable files
+        },
+      });
+
       const elapsed = Date.now() - requestStart;
       logRequest(LOG_FORMAT, req.method, url.pathname, 200, elapsed, {
-        contentLength: resolved.file.size,
+        contentLength: fileSize,
         remoteAddr,
         userAgent,
       });

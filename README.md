@@ -111,6 +111,43 @@ Note: Keep the server on a trusted LAN. If your client supports Basic Auth, set 
 3. Each configured directory is aliased (e.g., `games`, `games-2`) to keep paths unique across multiple mounts
 4. Files are served from `/files/{alias}/{relative-path}`
 
+## Advanced Features
+
+### HTTP Range Request Support
+
+tinfoil-bolt supports HTTP 206 Partial Content responses, enabling resumable downloads for large files. This is especially useful for:
+
+* **Interrupted downloads:** Resume a failed transfer without re-downloading the entire file
+* **Bandwidth efficiency:** Download only the portion of a file you need
+* **Large files on unreliable connections:** Split downloads across multiple requests
+
+**Supported Range Formats:**
+- `Range: bytes=0-1048575` - First 1MB
+- `Range: bytes=500-` - From byte 500 to end of file
+- `Range: bytes=-1048576` - Last 1MB (suffix range)
+
+**Server Response:**
+- `200 OK` - Full file requested (no Range header)
+- `206 Partial Content` - Valid range request accepted
+  - Includes `Content-Range` header (e.g., `bytes 0-1048575/5242880`)
+  - Includes `Content-Length` for the requested range size
+- `416 Range Not Satisfiable` - Invalid range (e.g., start >= file size)
+  - Includes `Content-Range: bytes */{total_size}` for client reference
+
+All file responses include the `Accept-Ranges: bytes` header to advertise support.
+
+**Example:**
+```bash
+# Resume a partially downloaded 5GB file, starting from byte 2147483648
+curl -H "Range: bytes=2147483648-" http://localhost:3000/files/games/large-game.nsp -o game.nsp --continue-at -
+
+# Download first 10MB
+curl -H "Range: bytes=0-10485759" http://localhost:3000/files/games/game.nsp -o game-chunk1.nsp
+
+# Download last 512MB
+curl -H "Range: bytes=-536870912" http://localhost:3000/files/games/game.nsp -o game-final-chunk.nsp
+```
+
 ## Tinfoil Setup (Switch)
 
 1. Open **Tinfoil** on your Nintendo Switch.
