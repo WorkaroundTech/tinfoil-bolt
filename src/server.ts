@@ -10,7 +10,12 @@ import { indexHandler } from "./routes/index";
 import { shopHandler } from "./routes/shop";
 import { filesHandler } from "./routes/files";
 
-console.log(`⚡ tinfoil-bolt server running!`);
+const asciiHeader = `
+╔════════════════════════════════════════╗
+║     ⚡ tinfoil-bolt server running!    ║
+╚════════════════════════════════════════╝
+`;
+console.log(asciiHeader);
 console.log(`> Scanning directories:`, BASES.map((b) => `${b.alias} -> ${b.path}`));
 
 const authPair = getAuthPair();
@@ -89,8 +94,9 @@ Bun.serve({
   },
 });
 
-console.log(`\n>> Server is up and listening on port: ${PORT}`);
-console.log(`>> Endpoints:`);
+console.log(`> Listening on port ${PORT}`);
+console.log(`> Available endpoints:`);
 console.log(`   GET /          - Index listing`);
 console.log(`   GET /shop.tfl  - Game library (Tinfoil format)`);
 console.log(`   GET /files/*   - File downloads`);
+console.log(`═══════════════════════════════════════════════\n`);
