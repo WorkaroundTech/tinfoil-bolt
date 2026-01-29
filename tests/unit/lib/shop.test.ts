@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { buildShopData, type ShopData } from "../../src/lib/shop";
+import { buildShopData, type ShopData } from "../../../src/services/shop";
 
 describe("lib/shop", () => {
   describe("buildShopData", () => {

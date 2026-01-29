@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { filesHandler } from "../../src/routes/files";
-import { type RequestContext, ServiceError } from "../../src/types";
+import { filesHandler } from "../../../src/routes/handlers/files";
+import { type RequestContext, ServiceError } from "../../../src/types";
 
 describe("routes/files", () => {
   const ctx: RequestContext = {

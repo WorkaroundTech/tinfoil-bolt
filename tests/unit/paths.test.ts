@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { encodePath } from "../src/lib/paths";
+import { encodePath } from "../../src/lib/paths";
 
 describe("paths", () => {
   describe("encodePath", () => {

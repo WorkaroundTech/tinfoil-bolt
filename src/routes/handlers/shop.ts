@@ -3,10 +3,10 @@
  * Handles GET /shop.json and GET /shop.tfl
  */
 
-import { type RequestContext, type Handler, ServiceError } from "../types";
-import { ShopDataCache } from "../lib/cache";
-import { buildShopData } from "../lib/shop";
-import { CACHE_TTL } from "../config";
+import { type RequestContext, type Handler, ServiceError } from "../../types";
+import { ShopDataCache } from "../../lib/cache";
+import { buildShopData } from "../../services/shop";
+import { CACHE_TTL } from "../../config";
 
 const shopDataCache = new ShopDataCache(CACHE_TTL);
 

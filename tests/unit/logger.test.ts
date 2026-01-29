@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { formatLog, type LogFormat } from "../src/lib/logger";
+import { formatLog, type LogFormat } from "../../src/lib/logger";
 
 describe("logger formats", () => {
   const testContext = {

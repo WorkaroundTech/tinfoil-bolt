@@ -46,4 +46,3 @@ export const SUCCESS_MESSAGE = process.env.SUCCESS_MESSAGE || "";
 
 // Logging configuration: Morgan-style log format (tiny, short, dev, common, combined)
 export const LOG_FORMAT = (process.env.LOG_FORMAT || "dev") as "tiny" | "short" | "dev" | "common" | "combined";
-

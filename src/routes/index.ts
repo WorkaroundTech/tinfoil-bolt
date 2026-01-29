@@ -1,31 +1,31 @@
 /**
- * Index route handler
- * Handles GET / and GET /tinfoil
+ * Router setup
+ * Routes requests to appropriate handlers based on pathname
  */
 
-import { type RequestContext, type Handler, ServiceError } from "../types";
-import { buildIndexPayload } from "./utils";
+import { type Handler, type RequestContext } from "../types";
+import { indexHandler } from "./handlers/index";
+import { shopHandler } from "./handlers/shop";
+import { filesHandler } from "./handlers/files";
 
-const INDEX_HTML = Bun.file(new URL("../index.html", import.meta.url));
-
-export const indexHandler: Handler = async (req: Request, ctx: RequestContext) => {
+export const router: Handler = async (req: Request, ctx: RequestContext) => {
   const url = new URL(req.url);
-  const accept = req.headers.get("accept") || "";
-  const isBrowser = accept.includes("text/html");
 
-  if (isBrowser) {
-    if (!(await INDEX_HTML.exists())) {
-      throw new ServiceError({
-        statusCode: 500,
-        message: "Index page missing",
-      });
-    }
-
-    return new Response(INDEX_HTML, {
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+  // 1. Index endpoint (lists shop.json and shop.tfl)
+  if (url.pathname === "/" || url.pathname === "/tinfoil") {
+    return indexHandler(req, ctx);
   }
 
-  const indexPayload = buildIndexPayload();
-  return Response.json(indexPayload);
+  // 2. Shop data endpoints
+  if (url.pathname === "/shop.json" || url.pathname === "/shop.tfl") {
+    return shopHandler(req, ctx);
+  }
+
+  // 3. File download endpoint
+  if (url.pathname.startsWith("/files/")) {
+    return filesHandler(req, ctx);
+  }
+
+  // 4. Health/Status endpoint
+  return new Response(`* tinfoil-bolt is active.\nIndex: / or /tinfoil\nShop: /shop.tfl`, { status: 200 });
 };

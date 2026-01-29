@@ -3,7 +3,7 @@
  */
 
 import { BASES, GLOB_PATTERN, SUCCESS_MESSAGE } from "../config";
-import { encodePath } from "./paths";
+import { encodePath } from "../lib/paths";
 
 export interface ShopData {
   files: Array<{ url: string; size: number }>;

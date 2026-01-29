@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { parseRange, isSingleRange, getContentRangeHeader } from "../src/lib/range";
+import { parseRange, isSingleRange, getContentRangeHeader } from "../../src/lib/range";
 
 describe("Range Request Utilities", () => {
   describe("parseRange", () => {

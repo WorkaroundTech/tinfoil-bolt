@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { shopHandler } from "../../src/routes/shop";
-import { type RequestContext, ServiceError } from "../../src/types";
+import { shopHandler } from "../../../src/routes/handlers/shop";
+import { type RequestContext, ServiceError } from "../../../src/types";
 
 describe("routes/shop", () => {
   const ctx: RequestContext = {

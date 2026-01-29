@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { join } from "path";
 import { existsSync, writeFileSync, unlinkSync, mkdirSync } from "fs";
+import { parseRange, isSingleRange, getContentRangeHeader } from "../../src/lib/range";
 
 // Create a test file for range request testing
 const testDir = "/tmp/tinfoil-test-ranges";

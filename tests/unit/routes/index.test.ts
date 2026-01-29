@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { indexHandler } from "../../src/routes/index";
-import { type RequestContext } from "../../src/types";
+import { indexHandler } from "../../../src/routes/handlers/index";
+import { type RequestContext } from "../../../src/types";
 
 describe("routes/index", () => {
   const ctx: RequestContext = {

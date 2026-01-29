@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
-import { authorize, timing, logging, errorHandler, compose } from "../src/middleware";
-import { indexHandler } from "../src/routes/index";
-import { type RequestContext, ServiceError } from "../src/types";
+import { authorize, timing, logging, errorHandler, compose } from "../../src/middleware";
+import { indexHandler } from "../../src/routes/handlers/index";
+import { type RequestContext, ServiceError } from "../../src/types";
 
 describe("server integration", () => {
   describe("full middleware chain with router", () => {

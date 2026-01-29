@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { ShopDataCache, type ShopData } from "../src/lib/cache";
+import { ShopDataCache, type ShopData } from "../../src/lib/cache";
 
 describe("ShopDataCache", () => {
   let cache: ShopDataCache;

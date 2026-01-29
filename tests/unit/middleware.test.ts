@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { authorize, timing, logging, errorHandler, compose } from "../src/middleware";
-import { type RequestContext, ServiceError } from "../src/types";
+import { authorize, timing, logging, errorHandler, compose } from "../../src/middleware";
+import { type RequestContext, ServiceError } from "../../src/types";
 
 describe("middleware", () => {
   describe("authorize", () => {

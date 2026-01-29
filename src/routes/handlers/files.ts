@@ -3,9 +3,9 @@
  * Handles GET /files/*
  */
 
-import { type RequestContext, type Handler, ServiceError } from "../types";
-import { resolveVirtualPath } from "../lib/paths";
-import { parseRange, isSingleRange, getContentRangeHeader } from "../lib/range";
+import { type RequestContext, type Handler, ServiceError } from "../../types";
+import { resolveVirtualPath } from "../../lib/paths";
+import { parseRange, isSingleRange, getContentRangeHeader } from "../../lib/range";
 
 export const filesHandler: Handler = async (req: Request, ctx: RequestContext) => {
   const url = new URL(req.url);
