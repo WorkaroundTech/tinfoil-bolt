@@ -52,7 +52,6 @@ export function setupServer() {
     port: PORT,
     hostname: "0.0.0.0", // Bind to all interfaces (required for WSL/Docker)
     async fetch(req, server) {
-      const url = new URL(req.url);
       const userAgent = req.headers.get("user-agent") || "";
       
       // Get remote address from x-forwarded-for header (set by proxies/load balancers)
