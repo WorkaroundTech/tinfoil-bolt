@@ -109,8 +109,8 @@ describe("server integration", () => {
       await errorHandledChain(req, ctx);
 
       expect(contextCaptured).not.toBe(null);
-      expect(contextCaptured?.remoteAddress).toBe("192.168.1.100");
-      expect(contextCaptured?.userAgent).toBe("CustomAgent/1.0");
+      expect((contextCaptured as any)?.remoteAddress).toBe("192.168.1.100");
+      expect((contextCaptured as any)?.userAgent).toBe("CustomAgent/1.0");
     });
   });
 

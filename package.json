@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "start": "bun run src/main.ts",
+    "start:dev": "bun run src/main.ts --watch",
+    "lint": "bun run tsc --noEmit",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },

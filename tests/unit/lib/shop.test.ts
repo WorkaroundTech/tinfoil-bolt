@@ -19,8 +19,8 @@ describe("lib/shop", () => {
         const file = shopData.files[0];
         expect(file).toHaveProperty("url");
         expect(file).toHaveProperty("size");
-        expect(typeof file.url).toBe("string");
-        expect(typeof file.size).toBe("number");
+        expect(typeof file?.url).toBe("string");
+        expect(typeof file?.size).toBe("number");
       }
     });
 
@@ -30,7 +30,7 @@ describe("lib/shop", () => {
       if (shopData.files.length > 0) {
         const file = shopData.files[0];
         // URLs should be encoded and start with ../files/
-        expect(file.url).toContain("../files/");
+        expect(file?.url).toContain("../files/");
       }
     });
 

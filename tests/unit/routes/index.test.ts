@@ -28,7 +28,7 @@ describe("routes/index", () => {
     expect(response.headers.get("content-type")).toContain("application/json");
     expect(response.status).toBe(200);
 
-    const data = await response.json();
+    const data = await response.json() as any;
     expect(data.files).toBeDefined();
     expect(data.directories).toBeDefined();
     expect(Array.isArray(data.files)).toBe(true);
@@ -40,7 +40,7 @@ describe("routes/index", () => {
     });
 
     const response = await indexHandler(req, ctx);
-    const data = await response.json();
+    const data = await response.json() as any;
 
     const fileUrls = data.files.map((f: any) => f.url);
     expect(fileUrls).toContain("shop.json");
