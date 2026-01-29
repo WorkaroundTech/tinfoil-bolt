@@ -1,4 +1,5 @@
 # tinfoil-bolt
+![tinfoil-bolt logo](bolt-logo-transparent-bg.png)
 
 **tinfoil-bolt** is a lightning-fast, zero-dependency, and lightweight backend server to serve your personal game backup library to Tinfoil on Nintendo Switch.
 
