@@ -3,7 +3,7 @@
 
 **tinfoil-bolt** is a lightning-fast, zero-dependency, and lightweight backend server to serve your personal game backup library to Tinfoil on Nintendo Switch.
 
-Built with [Bun](https://bun.sh), it replaces bloated, unmaintainable alternatives with a single, transparent TypeScript file that does exactly what you need and nothing else.
+Built with [Bun](https://bun.sh), it replaces bloated, unmaintainable alternatives with a clean, modular TypeScript codebase that does exactly what you need and nothing else.
 
 ## Why Bolt?
 
