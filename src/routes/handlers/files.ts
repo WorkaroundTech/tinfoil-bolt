@@ -8,9 +8,19 @@ import { resolveVirtualPath } from "../../lib/paths";
 import { parseRange, isSingleRange, getContentRangeHeader } from "../../lib/range";
 
 export const filesHandler: Handler = async (req: Request, ctx: RequestContext) => {
-  const url = new URL(req.url);
-  const decodedPath = decodeURIComponent(url.pathname);
-  const virtualPath = decodedPath.replace("/files/", "");
+  let virtualPath: string;
+  
+  try {
+    const url = new URL(req.url);
+    // url.pathname is already decoded by the URL constructor
+    virtualPath = url.pathname.replace("/files/", "");
+  } catch (error) {
+    // Malformed URI - this is a client error
+    throw new ServiceError({
+      statusCode: 400,
+      message: "Invalid URI encoding",
+    });
+  }
   
   const resolved = await resolveVirtualPath(virtualPath);
 
