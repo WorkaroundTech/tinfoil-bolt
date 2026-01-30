@@ -53,7 +53,7 @@ describe("routes/files", () => {
 
     // Should return 400 for malformed URI, or 404 if the URL constructor handles it gracefully
     expect(thrownError).not.toBe(null);
-    expect([400, 404]).toContain(thrownError?.statusCode);
+    expect([400, 404]).toContain(thrownError!.statusCode);
   });
 
   it("should handle special characters in file paths", async () => {
