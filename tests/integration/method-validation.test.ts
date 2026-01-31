@@ -7,7 +7,7 @@ import { setupServer, printEndpoints } from "../../src/app";
 import type { Server } from "bun";
 
 describe("HTTP Method Validation", () => {
-  let server: Server;
+  let server: Server<any>;
   let baseUrl: string;
 
   beforeAll(() => {
