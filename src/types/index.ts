@@ -13,17 +13,20 @@ export interface ServiceErrorOptions {
   statusCode: number;
   message: string;
   details?: Record<string, any>;
+  headers?: Record<string, string>;
 }
 
 export class ServiceError extends Error {
   statusCode: number;
   details?: Record<string, any>;
+  headers?: Record<string, string>;
 
   constructor(options: ServiceErrorOptions) {
     super(options.message);
     this.name = "ServiceError";
     this.statusCode = options.statusCode;
     this.details = options.details;
+    this.headers = options.headers;
     Object.setPrototypeOf(this, ServiceError.prototype);
   }
 }

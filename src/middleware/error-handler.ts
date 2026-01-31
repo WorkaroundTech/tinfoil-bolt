@@ -26,7 +26,10 @@ export const errorHandler = (handler: Handler): Handler => {
           return respondUnauthorized();
         }
 
-        return new Response(error.message, { status: error.statusCode });
+        return new Response(error.message, { 
+          status: error.statusCode,
+          headers: error.headers,
+        });
       }
 
       // Unknown error - log as 500

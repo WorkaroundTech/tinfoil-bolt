@@ -6,8 +6,9 @@
 import { type RequestContext, type Handler, ServiceError } from "../../types";
 import { resolveVirtualPath } from "../../lib/paths";
 import { parseRange, isSingleRange, getContentRangeHeader } from "../../lib/range";
+import { methodValidator } from "../../middleware";
 
-export const filesHandler: Handler = async (req: Request, ctx: RequestContext) => {
+const filesHandlerImpl: Handler = async (req: Request, ctx: RequestContext) => {
   let virtualPath: string;
   
   try {
@@ -87,3 +88,5 @@ export const filesHandler: Handler = async (req: Request, ctx: RequestContext) =
     },
   });
 };
+
+export const filesHandler = methodValidator(["GET", "HEAD"])(filesHandlerImpl);

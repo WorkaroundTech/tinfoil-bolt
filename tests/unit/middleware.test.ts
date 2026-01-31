@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { authorize, timing, logging, errorHandler, compose } from "../../src/middleware";
+import { authorize, timing, logging, errorHandler, compose, methodValidator } from "../../src/middleware";
 import { type RequestContext, ServiceError } from "../../src/types";
 
 describe("middleware", () => {
@@ -232,6 +232,264 @@ describe("middleware", () => {
 
       const response = await composed(req, ctx);
       expect(response.status).toBe(200);
+    });
+  });
+
+  describe("methodValidator", () => {
+    const mockContext = (): RequestContext => ({
+      remoteAddress: "127.0.0.1",
+      userAgent: "test",
+      startTime: Date.now(),
+    });
+
+    const mockHandler = async () => new Response("OK", { status: 200 });
+
+    describe("allowed methods", () => {
+      it("should allow GET requests when GET is in allowed methods", async () => {
+        const validator = methodValidator(["GET"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "GET" });
+        const response = await wrappedHandler(req, mockContext());
+        
+        expect(response.status).toBe(200);
+        expect(await response.text()).toBe("OK");
+      });
+
+      it("should allow HEAD requests when HEAD is in allowed methods", async () => {
+        const validator = methodValidator(["GET", "HEAD"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "HEAD" });
+        const response = await wrappedHandler(req, mockContext());
+        
+        expect(response.status).toBe(200);
+      });
+
+      it("should allow POST requests when POST is in allowed methods", async () => {
+        const validator = methodValidator(["POST"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "POST" });
+        const response = await wrappedHandler(req, mockContext());
+        
+        expect(response.status).toBe(200);
+      });
+
+      it("should allow multiple different methods", async () => {
+        const validator = methodValidator(["GET", "POST", "PUT", "DELETE"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const methods = ["GET", "POST", "PUT", "DELETE"];
+        for (const method of methods) {
+          const req = new Request("http://localhost/test", { method });
+          const response = await wrappedHandler(req, mockContext());
+          expect(response.status).toBe(200);
+        }
+      });
+
+      it("should be case insensitive for method names", async () => {
+        const validator = methodValidator(["GET"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "get" as any });
+        const response = await wrappedHandler(req, mockContext());
+        
+        expect(response.status).toBe(200);
+      });
+    });
+
+    describe("disallowed methods", () => {
+      it("should reject POST when only GET is allowed", async () => {
+        const validator = methodValidator(["GET"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "POST" });
+        
+        let thrownError: ServiceError | null = null;
+        try {
+          await wrappedHandler(req, mockContext());
+        } catch (error) {
+          thrownError = error as ServiceError;
+        }
+        
+        expect(thrownError).not.toBe(null);
+        expect(thrownError?.statusCode).toBe(405);
+        expect(thrownError?.message).toContain("Method POST not allowed");
+        expect(thrownError?.headers?.["Allow"]).toBe("GET");
+      });
+
+      it("should reject DELETE when only GET and POST are allowed", async () => {
+        const validator = methodValidator(["GET", "POST"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "DELETE" });
+        
+        let thrownError: ServiceError | null = null;
+        try {
+          await wrappedHandler(req, mockContext());
+        } catch (error) {
+          thrownError = error as ServiceError;
+        }
+        
+        expect(thrownError).not.toBe(null);
+        expect(thrownError?.statusCode).toBe(405);
+        expect(thrownError?.headers?.["Allow"]).toContain("GET");
+        expect(thrownError?.headers?.["Allow"]).toContain("POST");
+      });
+
+      it("should reject PUT, PATCH, and DELETE on GET-only endpoint", async () => {
+        const validator = methodValidator(["GET"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const methods = ["PUT", "PATCH", "DELETE"];
+        for (const method of methods) {
+          const req = new Request("http://localhost/test", { method });
+          
+          let thrownError: ServiceError | null = null;
+          try {
+            await wrappedHandler(req, mockContext());
+          } catch (error) {
+            thrownError = error as ServiceError;
+          }
+          
+          expect(thrownError).not.toBe(null);
+          expect(thrownError?.statusCode).toBe(405);
+          expect(thrownError?.message).toContain(`Method ${method} not allowed`);
+        }
+      });
+    });
+
+    describe("OPTIONS handling", () => {
+      it("should return 204 for OPTIONS requests", async () => {
+        const validator = methodValidator(["GET", "POST"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "OPTIONS" });
+        const response = await wrappedHandler(req, mockContext());
+        
+        expect(response.status).toBe(204);
+        expect(await response.text()).toBe("");
+      });
+
+      it("should include Allow header in OPTIONS response", async () => {
+        const validator = methodValidator(["GET", "HEAD"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "OPTIONS" });
+        const response = await wrappedHandler(req, mockContext());
+        
+        const allowHeader = response.headers.get("Allow");
+        expect(allowHeader).toContain("GET");
+        expect(allowHeader).toContain("HEAD");
+      });
+
+      it("should include CORS headers in OPTIONS response", async () => {
+        const validator = methodValidator(["GET", "POST"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "OPTIONS" });
+        const response = await wrappedHandler(req, mockContext());
+        
+        expect(response.headers.get("Access-Control-Allow-Methods")).toContain("GET");
+        expect(response.headers.get("Access-Control-Allow-Methods")).toContain("POST");
+        expect(response.headers.get("Access-Control-Max-Age")).toBe("86400");
+      });
+
+      it("should handle OPTIONS without calling the wrapped handler", async () => {
+        let handlerCalled = false;
+        const trackingHandler = async () => {
+          handlerCalled = true;
+          return new Response("OK");
+        };
+        
+        const validator = methodValidator(["GET"]);
+        const wrappedHandler = validator(trackingHandler);
+        
+        const req = new Request("http://localhost/test", { method: "OPTIONS" });
+        await wrappedHandler(req, mockContext());
+        
+        expect(handlerCalled).toBe(false);
+      });
+    });
+
+    describe("error responses", () => {
+      it("should include Allow header in 405 error", async () => {
+        const validator = methodValidator(["GET", "HEAD"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "POST" });
+        
+        let thrownError: ServiceError | null = null;
+        try {
+          await wrappedHandler(req, mockContext());
+        } catch (error) {
+          thrownError = error as ServiceError;
+        }
+        
+        expect(thrownError?.headers?.["Allow"]).toBeTruthy();
+        expect(thrownError?.headers?.["Allow"]).toContain("GET");
+        expect(thrownError?.headers?.["Allow"]).toContain("HEAD");
+      });
+
+      it("should format Allow header as comma-separated list", async () => {
+        const validator = methodValidator(["GET", "POST", "PUT"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "DELETE" });
+        
+        let thrownError: ServiceError | null = null;
+        try {
+          await wrappedHandler(req, mockContext());
+        } catch (error) {
+          thrownError = error as ServiceError;
+        }
+        
+        const allowHeader = thrownError?.headers?.["Allow"];
+        expect(allowHeader).toBe("GET, POST, PUT");
+      });
+    });
+
+    describe("edge cases", () => {
+      it("should handle single allowed method", async () => {
+        const validator = methodValidator(["POST"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const req = new Request("http://localhost/test", { method: "POST" });
+        const response = await wrappedHandler(req, mockContext());
+        
+        expect(response.status).toBe(200);
+      });
+
+      it("should work with all standard HTTP methods", async () => {
+        const validator = methodValidator(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"]);
+        const wrappedHandler = validator(mockHandler);
+        
+        const methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"];
+        for (const method of methods) {
+          const req = new Request("http://localhost/test", { method });
+          const response = await wrappedHandler(req, mockContext());
+          expect(response.status).toBe(200);
+        }
+      });
+
+      it("should preserve handler response when method is allowed", async () => {
+        const customHandler = async () => 
+          new Response("Custom response", { 
+            status: 201,
+            headers: { "X-Custom": "value" }
+          });
+        
+        const validator = methodValidator(["POST"]);
+        const wrappedHandler = validator(customHandler);
+        
+        const req = new Request("http://localhost/test", { method: "POST" });
+        const response = await wrappedHandler(req, mockContext());
+        
+        expect(response.status).toBe(201);
+        expect(await response.text()).toBe("Custom response");
+        expect(response.headers.get("X-Custom")).toBe("value");
+      });
     });
   });
 });

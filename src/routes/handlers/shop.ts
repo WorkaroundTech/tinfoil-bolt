@@ -7,10 +7,11 @@ import { type RequestContext, type Handler, ServiceError } from "../../types";
 import { ShopDataCache } from "../../lib/cache";
 import { buildShopData } from "../../services/shop";
 import { CACHE_TTL } from "../../config";
+import { methodValidator } from "../../middleware";
 
 const shopDataCache = new ShopDataCache(CACHE_TTL);
 
-export const shopHandler: Handler = async (req: Request, ctx: RequestContext) => {
+const shopHandlerImpl: Handler = async (req: Request, ctx: RequestContext) => {
   const url = new URL(req.url);
   
   try {
@@ -38,3 +39,5 @@ export const shopHandler: Handler = async (req: Request, ctx: RequestContext) =>
     });
   }
 };
+
+export const shopHandler = methodValidator(["GET", "HEAD"])(shopHandlerImpl);

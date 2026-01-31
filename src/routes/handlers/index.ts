@@ -5,10 +5,11 @@
 
 import { type RequestContext, type Handler, ServiceError } from "../../types";
 import { buildIndexPayload } from "../utils";
+import { methodValidator } from "../../middleware";
 
 const INDEX_HTML = Bun.file(new URL("../../index.html", import.meta.url));
 
-export const indexHandler: Handler = async (req: Request, ctx: RequestContext) => {
+const indexHandlerImpl: Handler = async (req: Request, ctx: RequestContext) => {
   const url = new URL(req.url);
   const accept = req.headers.get("accept") || "";
   const isBrowser = accept.includes("text/html");
@@ -29,3 +30,5 @@ export const indexHandler: Handler = async (req: Request, ctx: RequestContext) =
   const indexPayload = buildIndexPayload();
   return Response.json(indexPayload);
 };
+
+export const indexHandler = methodValidator(["GET", "HEAD"])(indexHandlerImpl);
