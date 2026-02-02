@@ -22,10 +22,11 @@ export async function buildShopData(): Promise<ShopData> {
   await Promise.all(
     BASES.map(async ({ path: dir, alias }) => {
       const glob = new Bun.Glob(GLOB_PATTERN);
+      let fileCount = 0;
       for await (const file of glob.scan({ cwd: dir, onlyFiles: true })) {
         const virtualPath = `${alias}/${file}`;
         fileEntries.push({ virtualPath, absPath: `${dir}/${file}` });
-
+        fileCount++;
         const dirName = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
         if (dirName.length > 0) {
           directories.add(`${alias}/${dirName}`);
