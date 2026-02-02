@@ -13,9 +13,10 @@ const filesHandlerImpl: Handler = async (req: Request, ctx: RequestContext) => {
   
   try {
     const url = new URL(req.url);
+    // Explicitly decode the pathname as URL constructor doesn't always decode it
     virtualPath = decodeURIComponent(url.pathname.replace("/files/", ""));
   } catch (error) {
-    // Malformed URI - this is a client error
+    // Malformed URI or decoding error - this is a client error
     throw new ServiceError({
       statusCode: 400,
       message: "Invalid URI encoding",
