@@ -13,8 +13,7 @@ const filesHandlerImpl: Handler = async (req: Request, ctx: RequestContext) => {
   
   try {
     const url = new URL(req.url);
-    // url.pathname is already decoded by the URL constructor
-    virtualPath = url.pathname.replace("/files/", "");
+    virtualPath = decodeURIComponent(url.pathname.replace("/files/", ""));
   } catch (error) {
     // Malformed URI - this is a client error
     throw new ServiceError({
