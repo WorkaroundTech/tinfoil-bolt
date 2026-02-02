@@ -21,20 +21,30 @@ export async function buildShopData(): Promise<ShopData> {
   // Scan ALL directories
   await Promise.all(
     BASES.map(async ({ path: dir, alias }) => {
-      const glob = new Bun.Glob(GLOB_PATTERN);
-      let fileCount = 0;
-      for await (const file of glob.scan({ cwd: dir, onlyFiles: true })) {
-        const virtualPath = `${alias}/${file}`;
-        fileEntries.push({ virtualPath, absPath: `${dir}/${file}` });
-        fileCount++;
-        const dirName = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
-        if (dirName.length > 0) {
-          directories.add(`${alias}/${dirName}`);
+      try {
+        const glob = new Bun.Glob(GLOB_PATTERN);
+        let fileCount = 0;
+        for await (const file of glob.scan({ cwd: dir, onlyFiles: true })) {
+          const virtualPath = `${alias}/${file}`;
+          fileEntries.push({ virtualPath, absPath: `${dir}/${file}` });
+          fileCount++;
+          const dirName = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
+          if (dirName.length > 0) {
+            directories.add(`${alias}/${dirName}`);
+          } else {
+            directories.add(alias);
+          }
+        }
+        console.log(`[SHOP] Scanned ${fileCount} files from ${alias} (${dir})`);
+      } catch (err) {
+        // Silently skip directories that don't exist or are inaccessible
+        const error = err as NodeJS.ErrnoException;
+        if (error.code === "ENOENT") {
+          console.log(`[SHOP] Directory not found, skipping: ${dir}`);
         } else {
-          directories.add(alias);
+          console.warn(`[SHOP] Error scanning directory ${dir}:`, error);
         }
       }
-      console.log(`[SHOP] Scanned ${fileCount} files from ${alias} (${dir})`);
     })
   );
 
