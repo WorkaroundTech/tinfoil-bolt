@@ -26,6 +26,12 @@ const filesHandlerImpl: Handler = async (req: Request, ctx: RequestContext) => {
   const resolved = await resolveVirtualPath(virtualPath);
 
   if (!resolved) {
+    // Log detailed debugging information
+    console.error("[FILES] 404 Not Found:", {
+      virtualPath,
+      urlPathname: new URL(req.url).pathname,
+      pathParts: virtualPath.split("/"),
+    });
     throw new ServiceError({
       statusCode: 404,
       message: "File not found",

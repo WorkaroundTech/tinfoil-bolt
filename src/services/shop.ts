@@ -18,13 +18,23 @@ export async function buildShopData(): Promise<ShopData> {
   const fileEntries: { virtualPath: string; absPath: string }[] = [];
   const directories = new Set<string>();
 
+  console.log("[SHOP] Starting scan with BASES:", BASES);
+  console.log("[SHOP] GLOB_PATTERN:", GLOB_PATTERN);
+
   // Scan ALL directories
   await Promise.all(
     BASES.map(async ({ path: dir, alias }) => {
       const glob = new Bun.Glob(GLOB_PATTERN);
+      let fileCount = 0;
       for await (const file of glob.scan({ cwd: dir, onlyFiles: true })) {
         const virtualPath = `${alias}/${file}`;
         fileEntries.push({ virtualPath, absPath: `${dir}/${file}` });
+        fileCount++;
+        
+        // Log first few files for debugging
+        if (fileCount <= 3) {
+          console.log("[SHOP] Found file:", { file, virtualPath, absPath: `${dir}/${file}` });
+        }
 
         const dirName = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
         if (dirName.length > 0) {
@@ -33,6 +43,7 @@ export async function buildShopData(): Promise<ShopData> {
           directories.add(alias);
         }
       }
+      console.log(`[SHOP] Scanned ${fileCount} files from ${alias} (${dir})`);
     })
   );
 
